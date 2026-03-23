@@ -4,51 +4,104 @@
     <title>Classroom Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: sans-serif; background: #800000; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        h1 { margin-bottom: 20px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase; }
-        #reader { width: 250px; height: 250px; border: 6px solid #FFD700; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
-        #status-overlay { margin-top: 25px; background: rgba(0, 0, 0, 0.6); padding: 12px 35px; border-radius: 50px; font-size: 1.1em; border: 1px solid #FFD700; min-width: 200px; text-align: center; }
-        .success-flash { background: #27ae60 !important; border-color: white !important; transform: scale(1.1); }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #800000; /* Maroon */
+            color: #FFD700; /* Gold Text */
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+
+        h1 { 
+            margin-bottom: 20px; 
+            font-weight: bold; 
+            letter-spacing: 3px; 
+            text-transform: uppercase;
+            color: #FFD700; /* Gold Header */
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        #reader { 
+            width: 250px; 
+            height: 250px; 
+            border: 6px solid #FFD700; /* Gold Border */
+            border-radius: 20px; 
+            overflow: hidden; 
+            background: #000; 
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); 
+        }
+
+        #status-overlay { 
+            margin-top: 25px; 
+            background: rgba(0, 0, 0, 0.7); 
+            padding: 12px 35px; 
+            border-radius: 50px; 
+            font-size: 1.2em; 
+            border: 2px solid #FFD700; /* Gold Overlay Border */
+            color: #FFD700; /* Gold Overlay Text */
+            min-width: 220px; 
+            text-align: center; 
+            font-weight: bold;
+        }
+
+        /* Success state remains green for clarity, but adds white border */
+        .success-flash { 
+            background: #27ae60 !important; 
+            color: white !important;
+            border-color: white !important; 
+            transform: scale(1.1); 
+        }
     </style>
 </head>
 <body>
 
-    <h1>Student Hallpass</h1>
+    <h1>Student Checkout</h1>
     <div id="reader"></div>
-    <div id="status-overlay">Loading Script...</div>
+    <div id="status-overlay">Loading...</div>
 
     <script>
-        // REPLACE THE LINE BELOW WITH YOUR URL
+        // PASTE YOUR GOOGLE APPS SCRIPT URL HERE
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx_32jH1ukd0QYWe8Z8jgBVZDnQojvcqt5Z3Ac5c6Rs5zUSJS3OH6MfRos1Pbk4Mrc/exec"; 
         
         const statusEl = document.getElementById('status-overlay');
         
-        // Start Logic
         function startCam() {
-            statusEl.innerText = "Requesting Camera...";
+            statusEl.innerText = "Starting Camera...";
             
             const html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 20, qrbox: { width: 180, height: 180 }, aspectRatio: 1.0 };
+            const config = { 
+                fps: 20, 
+                qrbox: { width: 180, height: 180 }, 
+                aspectRatio: 1.0 
+            };
 
             html5QrCode.start({ facingMode: "user" }, config, onScanSuccess)
             .then(() => {
                 statusEl.innerText = "Ready to Scan";
             })
             .catch(err => {
-                statusEl.style.color = "#FFD700";
-                statusEl.innerText = "Error: " + err;
+                statusEl.innerText = "Camera Error";
+                console.error(err);
             });
         }
 
         function onScanSuccess(decodedText) {
-            // Prevent double scans
             if (statusEl.classList.contains('success-flash')) return;
             
             statusEl.innerText = "Logged: " + decodedText;
             statusEl.classList.add('success-flash');
             new Audio('https://www.soundjay.com/buttons/beep-07a.mp3').play();
 
-            fetch(SCRIPT_URL + "?studentID=" + encodeURIComponent(decodedText), { method: "POST", mode: 'no-cors' })
+            // Send to Google Sheets
+            fetch(SCRIPT_URL + "?studentID=" + encodeURIComponent(decodedText), { 
+                method: "POST", 
+                mode: 'no-cors' 
+            })
             .then(() => {
                 setTimeout(() => {
                     statusEl.innerText = "Ready to Scan";
@@ -57,7 +110,6 @@
             });
         }
 
-        // Run the start function immediately
         startCam();
     </script>
 </body>
