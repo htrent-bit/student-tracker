@@ -1,39 +1,95 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Classroom Scanner</title>
+    <title>Seamless Student Tracker</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #121212; color: white; padding: 20px; }
-        #reader { width: 100%; max-width: 500px; margin: auto; border-radius: 10px; overflow: hidden; }
-        #status { margin-top: 20px; font-size: 1.2em; color: #4caf50; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #000; 
+            color: white; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+        /* This makes the camera fill the screen */
+        #reader { 
+            width: 100vw; 
+            height: 100vh; 
+            object-fit: cover;
+        } 
+        /* A simple overlay to show status */
+        #status-overlay { 
+            position: absolute; 
+            bottom: 40px; 
+            background: rgba(0, 0, 0, 0.8); 
+            padding: 15px 30px; 
+            border-radius: 30px; 
+            font-size: 1.4em; 
+            border: 2px solid #2196f3;
+            z-index: 10;
+        }
+        .success-flash { 
+            background: #2e7d32 !important; 
+            border-color: #fff !important; 
+        }
     </style>
 </head>
 <body>
-    <h1>Student Check-Out</h1>
+
     <div id="reader"></div>
-    <div id="status">Ready to scan...</div>
+    <div id="status-overlay">Initializing Camera...</div>
 
     <script>
-        const SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
+        const SCRIPT_URL = "YOUR_APPS_SCRIPT_URL_HERE";
+        
+        // 1. Initialize the core library (not the UI version)
+        const html5QrCode = new Html5Qrcode("reader");
+        let isProcessing = false;
+
+        const config = { 
+            fps: 20, 
+            qrbox: { width: 280, height: 280 } 
+        };
+
+        // 2. Start the camera automatically on page load
+        html5QrCode.start(
+            { facingMode: "user" }, 
+            config, 
+            onScanSuccess
+        ).then(() => {
+            document.getElementById('status-overlay').innerText = "Ready to Scan";
+        }).catch(err => {
+            document.getElementById('status-overlay').innerText = "Camera Error: Check Permissions";
+        });
 
         function onScanSuccess(decodedText) {
-            document.getElementById('status').innerText = "Logging: " + decodedText;
+            if (isProcessing) return; // Prevent "machine gun" logging
             
-            // Send data to Google Sheets via the Webhook
-            fetch(SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify({ studentID: decodedText })
-            })
-            .then(() => {
-                document.getElementById('status').innerText = "Logged Successfully!";
-                setTimeout(() => { document.getElementById('status').innerText = "Ready to scan..."; }, 3000);
-            })
-            .catch(err => console.error("Error:", err));
-        }
+            isProcessing = true;
+            const status = document.getElementById('status-overlay');
+            
+            // Visual feedback
+            status.innerText = "Logged: " + decodedText;
+            status.classList.add('success-flash');
+            new Audio('https://www.soundjay.com/buttons/beep-07a.mp3').play();
 
-        const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-        html5QrcodeScanner.render(onScanSuccess);
+            // Send to Google Sheets
+            const finalUrl = SCRIPT_URL + "?studentID=" + encodeURIComponent(decodedText);
+            fetch(finalUrl, { method: "POST", mode: 'no-cors' })
+            .then(() => {
+                // Wait 3 seconds before allowing the next scan
+                setTimeout(() => {
+                    status.innerText = "Ready to Scan";
+                    status.classList.remove('success-flash');
+                    isProcessing = false;
+                }, 3000); 
+            });
+        }
     </script>
 </body>
 </html>
