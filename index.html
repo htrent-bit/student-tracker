@@ -1,98 +1,21 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Square Scanner Kiosk</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <style>
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: #1a1a1a; 
-            color: white; 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            overflow: hidden; 
-        }
+function doGet(e) {
+  return handleResponse(e);
+}
 
-        /* This creates the square container */
-        #reader { 
-            width: 400px; 
-            height: 400px; 
-            border: 4px solid #3498db;
-            border-radius: 20px;
-            overflow: hidden;
-            background: #000;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
+function doPost(e) {
+  return handleResponse(e);
+}
 
-        #status-overlay { 
-            margin-top: 30px;
-            background: rgba(255, 255, 255, 0.1); 
-            padding: 15px 40px; 
-            border-radius: 50px; 
-            font-size: 1.3em; 
-            transition: all 0.3s;
-        }
-
-        .success-flash { 
-            background: #27ae60 !important; 
-            color: white;
-            transform: scale(1.1);
-        }
-    </style>
-</head>
-<body>
-
-    <div id="reader"></div>
-    <div id="status-overlay">Waiting for Camera...</div>
-
-    <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx66jNDMxdlJiBCIuFAnJUmS5SpZ8e4AOmQhc1lg5D4NzY0eQNbhS5Fq1bc0-HwCH1P/exec";
-        const html5QrCode = new Html5Qrcode("reader");
-        let isProcessing = false;
-
-        // Force a 1:1 Aspect Ratio (Square)
-        const config = { 
-            fps: 20, 
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0 
-        };
-
-        // Start automatically
-        html5QrCode.start(
-            { facingMode: "user" }, 
-            config, 
-            onScanSuccess
-        ).then(() => {
-            document.getElementById('status-overlay').innerText = "Scan Student QR Code";
-        }).catch(err => {
-            document.getElementById('status-overlay').innerText = "Camera Error";
-        });
-
-        function onScanSuccess(decodedText) {
-            if (isProcessing) return; 
-            
-            isProcessing = true;
-            const status = document.getElementById('status-overlay');
-            
-            status.innerText = "Confirmed: " + decodedText;
-            status.classList.add('success-flash');
-            new Audio('https://www.soundjay.com/buttons/beep-07a.mp3').play();
-
-            const finalUrl = SCRIPT_URL + "?studentID=" + encodeURIComponent(decodedText);
-            
-            fetch(finalUrl, { method: "POST", mode: 'no-cors' })
-            .then(() => {
-                setTimeout(() => {
-                    status.innerText = "Scan Student QR Code";
-                    status.classList.remove('success-flash');
-                    isProcessing = false;
-                }, 3000); 
-            });
-        }
-    </script>
-</body>
-</html>
+function handleResponse(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheets()[0];
+  
+  // Get ID from the URL (?studentID=xxx)
+  var id = (e && e.parameter && e.parameter.studentID) ? e.parameter.studentID : "No ID";
+  
+  // Append Row: [Timestamp, ID]
+  sheet.appendRow([new Date(), id]);
+  
+  // Return a clear "OK" to the browser
+  return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
+}
